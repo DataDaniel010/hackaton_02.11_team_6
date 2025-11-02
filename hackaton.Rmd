@@ -3,11 +3,15 @@ title: "Hackaton"
 author: "Danil Tukanov"
 date: "2025-11-02"
 output: html_document
+toc-title: "Outline"
 ---
 
 ```{r first chunk}
 library(tidyverse)
+library(flextable)
+library(epitools)
 
+set_flextable_defaults(table.layout = "autofit")
 ```
 #Чтение данных
 
@@ -17,10 +21,13 @@ insurance_data <- read_csv("data/HealthInsurance.csv")
 insurance_data %>% 
   summary()
 
+insurance_data %>% 
+  count(family)
 ```
 
 #Описание данных
 Сформировать таблицы с базовыми описательными статистиками.
+Количественные данные
 
 
 
@@ -32,6 +39,57 @@ insurance_data %>%
 #Анализ данных
 Выбрать и реализовать методы однофакторного анализа для количественной оценки взаимосвязи между наличием МС и собранными признаками пациентов (помните, что взаимосвязь - это не только p-значения, но и доверительные интервалы!).
 
+Исследование кросс-секционное. Для оценки независимости групп будет использован тест хи-квадрат, для оценки силы ассоциации среди категориальных переменных будет использован RR.
+
+```{r}
+insurance_data %>% 
+  mutate(insurance = ifelse(insurance == "no", "Нет страховки", "Есть страховка")) -> insurance_data
+```
+
+
+```{r}
+insurance_data %>% 
+  select(c("gender", "insurance")) %>% 
+  table %>% 
+  as.data.frame.matrix -> gend_table
+
+gend_table <- cbind("Пол" = rownames(gend_table), gend_table)
+rownames(gend_table) <- NULL
+
+
+ft_gend <- flextable(gend_table)
+ft_gend <- autofit(ft_gend)
+ft_gend <- theme_vanilla(ft_gend)
+ft_gend <- add_header_lines(ft_gend, values = "Гендер и наличие страховки")
+ft_gend <- align(ft_gend, i = 1, part = "header", align = "center")
+ft_gend
+```
+
+
+```{r}
+insurance_data %>% 
+  select(c("gender", "insurance")) %>% 
+  table %>% 
+  chisq.test() -> gend
+
+cat("Проверка гипотезы о независимости пола и наличия страховки\n")
+gend$method
+cat("P-value:")
+gend$p.value
+cat("Отклоняем нулевую гипотезу о независимости пола и наличия страховки")
+
+```
+Сила ассоциации
+```{r}
+insurance_data %>% 
+  select(c("gender", "insurance")) %>% 
+  table %>% 
+  riskratio(., rev = "both") -> rr_gender
+
+rr_gender$measure
+cat("RR показывает, что у женщин есть страховка в 1.067 раз чаще")
+
+```
 
 
 
