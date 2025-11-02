@@ -791,7 +791,7 @@ ggplot(rr_clean, aes(x = rr, y = reorder(comparison, rr))) +
                  width = 0.2, alpha = 0.6, orientation='y') +
   geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
   facet_wrap(~ variable, scales = "free_y", ncol = 2) +
-  labs(title = "Отношения рисков (переменная vs наличие страховки)",
+  labs(title = "Отношения рисков по наличию страховки (reference vs variable)",
        x = "Relative Risk (RR) с 95% ДИ",
        y = "Сравнение") +
   theme_minimal() +
