@@ -334,11 +334,11 @@ plot_list <- list()
 
 for (col_name in categorical_vars) {
   temp_data <- data.frame(
-    default = insurance_data$insurance,
+    insurance = insurance_data$insurance,
     x = insurance_data[[col_name]]
   )
   p <- ggplot(data = temp_data) +
-    geom_mosaic(aes(x = product(default, x), fill = default)) +
+    geom_mosaic(aes(x = product(insurance, x), fill = insurance)) +
     ggtitle(paste("Связь наличия МС и", col_name)) +
     coord_flip() +
     theme(legend.position = "none")
