@@ -254,6 +254,10 @@ plot_categorical(insurance_data)
 
 Исследование кросс-секционное. Для оценки независимости групп с категориальными признаками будет использован тест хи-квадрат, для оценки силы ассоциации среди категориальных переменных будет использован RR.
 
+Для оценки разницы между количественными переменными будет использован t-test.
+
+Уровень значимости во всех случаях p<0.05
+
 ```{r}
 insurance_data %>% 
   mutate(insurance = ifelse(insurance == "no", "Нет страховки", "Есть страховка")) -> insurance_data
@@ -522,6 +526,7 @@ rr_ne_s$measure
 cat("RR показывает, что у проживающих на юге есть страховка в 0.939 раза реже, чем у тех, кто проживает на северовостоке CI(0.913 - 0.966)")
 
 ```
+
 ```{r}
 riskratio(region_4x2[c("northeast", "west"), ], rev = "columns") -> rr_ne_w
 rr_ne_w$measure
@@ -531,7 +536,7 @@ cat("RR показывает, что у проживающих на западе
 ##Образование и страховка
 Образование можно представить как категориальную порядковую переменную, ведь PhD явно лучше bachelor. Можно попробовать применить тест Манна-Уитни
 Нулевая гипотеза: распределение уровней образования одинаково для обеих групп (со страховкой и без)
-Альтернативная гипотеза: 
+Альтернативная гипотеза: распределение уровней образования различно для групп
 ```{r}
 insurance_data %>% 
  # mutate(education_binary = ifelse(education == c("bachelor", "highschool", "ged", "phd" )))
@@ -543,16 +548,132 @@ insurance_data_mw %>%
 
 mw <- wilcox.test(education ~ insurance, data = insurance_data_mw)
 
-
+cat("P-значение:")
 mw$p.value
-cat("")
+cat("Отвергаем нулевую гипотезу об одинаковом распределении уровней образования для обеих групп")
+
+```
+Другой вариант, категоризируем уровни образования на три категории и далее находим хи-квадрат и RR: 
+```{r}
+insurance_data %>% 
+  mutate(education = factor(education, levels = c("other", "none", "ged", "highschool", "bachelor", "master", "phd"), labels = c("Отсутствие или другое", "Отсутствие или другое", "Школьный уровень", "Школьный уровень", "Высшее образование", "Высшее образование", "Высшее образование"))) -> insurance_data_3x2
 
 ```
 
 
 ```{r}
-insurance_data %>% count(education)
+insurance_data_3x2 %>% 
+  select(c("education", "insurance")) %>% 
+  table %>% 
+  as.data.frame.matrix -> education_table
+
+education_table <- cbind("Уровень образования" = rownames(education_table), education_table)
+rownames(education_table) <- NULL
+
+
+ft_education <- flextable(education_table)
+ft_education <- autofit(ft_education)
+ft_education <- theme_vanilla(ft_education)
+ft_education <- add_header_lines(ft_education, values = "Уровень образования и наличие страховки")
+ft_education <- align(ft_education, i = 1, part = "header", align = "center")
+ft_education
 ```
+
+```{r}
+insurance_data_3x2 %>% 
+  select(c("education", "insurance")) %>% 
+  table %>% 
+  chisq.test() -> education
+
+cat("Проверка гипотезы о независимости уровня образования и наличия страховки\n")
+education$method
+cat("P-value:")
+education$p.value
+cat("Отклоняем нулевую гипотезу о независимости уровня образования и наличия страховки")
+```
+
+Сила ассоциаций
+```{r}
+insurance_data_3x2 %>% 
+  select(c("education", "insurance")) %>% 
+  table -> education_3x2
+
+riskratio(education_3x2[c("Отсутствие или другое", "Школьный уровень"), ], rev = "columns") -> rr_ot_sch
+rr_ot_sch$measure
+cat("RR показывает, что у людей со школьным уровнем образования в 1.2 раза чаще встречается страховка, чем у людей без образования или другое CI(1.17, 1.26)")
+
+
+```
+
+
+```{r}
+riskratio(education_3x2[c("Отсутствие или другое", "Высшее образование"), ], rev = "columns") -> rr_ot_high
+rr_ot_high$measure
+cat("RR показывает, что у людей с высшим образования в 1.37 раза чаще встречается страховка, чем у людей без образования или другое CI(1.32, 1.42)")
+```
+```{r}
+riskratio(education_3x2[c("Школьный уровень", "Высшее образование"), ], rev = "columns") -> rr_sch_high
+rr_sch_high$measure
+cat("RR показывает, что у людей с высшим образования в 1.12 раза чаще встречается страховка, чем у людей со школьным уровнем образования CI(1.10, 1.47)")
+
+```
+## Этнос и страховка
+
+```{r}
+insurance_data %>% 
+  count(ethnicity)
+
+insurance_data %>% 
+  select(c("ethnicity", "insurance")) %>% 
+  table %>% 
+  as.data.frame.matrix -> ethnicity_table
+
+ethnicity_table <- cbind("Этнос" = rownames(ethnicity_table), ethnicity_table)
+rownames(ethnicity_table) <- NULL
+
+
+ft_ethnicity <- flextable(ethnicity_table)
+ft_ethnicity <- autofit(ft_ethnicity)
+ft_ethnicity <- theme_vanilla(ft_ethnicity)
+ft_ethnicity <- add_header_lines(ft_ethnicity, values = "Этнос и наличие страховки")
+ft_ethnicity <- align(ft_ethnicity, i = 1, part = "header", align = "center")
+ft_ethnicity
+```
+
+```{r}
+insurance_data %>% 
+  select(c("ethnicity", "insurance")) %>% 
+  table %>% 
+  chisq.test() -> ethnicity
+
+cat("Проверка гипотезы о независимости этноса и наличия страховки\n")
+ethnicity$method
+cat("P-value:")
+ethnicity$p.value
+cat("Отклоняем нулевую гипотезу о независимости этноса и наличия страховки")
+```
+Сила ассоциации
+
+```{r}
+insurance_data %>% 
+  select(c("ethnicity", "insurance")) %>% 
+  table -> ethnicity_3x2
+
+riskratio(ethnicity_3x2[c("afam", "cauc"), ], rev = "columns") -> rr_af_c
+rr_af_c$measure
+cat("RR показывает, что у европеоидных людей в 1.06 раза чаще встречается страховка, чем у афроамериканцев CI(1.03, 1.10)")
+
+```
+
+```{r}
+riskratio(ethnicity_3x2[c("afam", "cauc"), ], rev = "columns") -> rr_af_c
+rr_af_c$measure
+cat("RR показывает, что у европеоидных людей в 1.06 раза чаще встречается страховка, чем у афроамериканцев CI(1.03, 1.10)")
+```
+
+
+
+
 
 
 
