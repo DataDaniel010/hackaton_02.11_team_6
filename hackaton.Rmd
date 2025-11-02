@@ -15,6 +15,7 @@ library(gridExtra)
 library(patchwork)
 library(ggrepel)
 library(ggthemes)
+library(ggmosaic)
 
 library(flextable)
 library(epitools)
@@ -188,7 +189,7 @@ plot_numeric<- function(df) {
     sd_val <- sd(df[[var]], na.rm = TRUE)
     
     p <- ggplot(df, aes(x = .data[[var]])) +
-      geom_histogram(aes(y = ..density..),
+      geom_histogram(aes(y = after_stat(density)),
                      bins = 25,
                      fill = "lightblue",
                      alpha = 0.7,
@@ -248,6 +249,47 @@ plot_numeric(numeric_columns)
 ```{r fig.width=12, fig.height=10}
 plot_categorical(insurance_data)
 ```
+
+Поищем взаимосвязи с МС.
+
+```{r fig.width=10, fig.height=8}
+p1<- ggplot(insurance_data, aes(x = insurance, y = age, fill = insurance)) +
+  geom_boxplot() +
+  labs(title = "Возраст и наличие страховки") +
+  theme(legend.position = "none")
+
+p2<- ggplot(insurance_data, aes(x = insurance, y = family, fill = insurance)) +
+  geom_boxplot() +
+  labs(title = "Количество членов семьи и наличие страховки") +
+  theme(legend.position = "none")
+p1+p2
+```
+```{r fig.width=14, fig.height=12}
+
+categorical_vars <- names(insurance_data)[sapply(insurance_data, function(x) is.factor(x) | is.character(x))]
+categorical_vars <- categorical_vars[categorical_vars != "insurance"]
+plot_list <- list()
+
+for (col_name in categorical_vars) {
+  temp_data <- data.frame(
+    default = insurance_data$insurance,
+    x = insurance_data[[col_name]]
+  )
+  p <- ggplot(data = temp_data) +
+    geom_mosaic(aes(x = product(default, x), fill = default)) +
+    ggtitle(paste("Связь наличия МС и", col_name)) +
+    coord_flip() +
+    theme(legend.position = "none")
+  plot_list[[col_name]] <- p
+
+  
+}
+
+(plot_list[[1]] | plot_list[[2]] | plot_list[[3]]) /
+(plot_list[[4]] | plot_list[[5]] | plot_list[[6]]) /
+(plot_list[[7]] | plot_list[[8]] | plot_spacer())
+```
+
 
 #Анализ данных
 Выбрать и реализовать методы однофакторного анализа для количественной оценки взаимосвязи между наличием МС и собранными признаками пациентов (помните, что взаимосвязь - это не только p-значения, но и доверительные интервалы!).
@@ -736,5 +778,86 @@ insurance_data %>%
 ```
 
 
+# Визуализация результатов
+```{r fig.width=14, fig.height=12}
+calculate_rr_universal <- function(data, exposure_var, outcome_var = "insurance") {
+
+  tab <- data %>% 
+    select(all_of(c(exposure_var, outcome_var))) %>% 
+    table()
+  
+  levels <- rownames(tab)
+  results <- data.frame()
+
+  if(length(levels) == 2) {
+    rr_result <- riskratio(tab, rev = "columns")
+
+    results <- as.data.frame(rr_result$measure) %>%
+      mutate(
+        variable = exposure_var,
+        level = rownames(.),
+        comparison = paste(levels[1], "vs", levels[2]),
+        reference = levels[1],
+        .before = 1
+      ) %>%
+      rename(
+        rr = estimate,
+        rr_lower = lower,
+        rr_upper = upper
+      )
+    
+  } else {
+
+    for(i in 1:(length(levels)-1)) {
+      for(j in (i+1):length(levels)) {
+        pair_tab <- tab[c(i, j), ]
+        rr_result <- riskratio(pair_tab, rev = "columns")
+        
+        pair_results <- as.data.frame(rr_result$measure) %>%
+          mutate(
+            variable = exposure_var,
+            level = rownames(.),
+            comparison = paste(levels[i], "vs", levels[j]),
+            reference = levels[i],
+            .before = 1
+          ) %>%
+          rename(
+            rr = estimate,
+            rr_lower = lower,
+            rr_upper = upper
+          )
+        
+        results <- rbind(results, pair_results)
+      }
+    }
+  }
+  
+  return(results)
+}
+
+rr_results <- data.frame()
+
+for(var in categorical_vars) {
+  var_results <- calculate_rr_universal(insurance_data, var)
+  rr_results <- rbind(rr_results, var_results)
+}
+
+
+rr_clean <- rr_results %>%  filter(!is.na(rr_lower)) %>% 
+  arrange(variable, rr)
+
+ggplot(rr_clean, aes(x = rr, y = reorder(comparison, rr))) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_errorbar(aes(xmin = rr_lower, xmax = rr_upper), 
+                 width = 0.2, alpha = 0.6, orientation='y') +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
+  facet_wrap(~ variable, scales = "free_y", ncol = 2) +
+  labs(title = "Отношения рисков по наличию страховки (reference vs variable)",
+       x = "Relative Risk (RR) с 95% ДИ",
+       y = "Сравнение") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 12))
+
+```
 
 
