@@ -351,6 +351,59 @@ rr_married$measure
 cat("RR показывает, что у людей в браке есть страховка в 1.2 раза чаще, CI(1.179 - 1.237)")
 
 ```
+## Самозанятость и страховка
+
+```{r}
+insurance_data %>% 
+  mutate(selfemp = ifelse(selfemp == "no", "Не самозанятый", "Самозанятый")) %>% 
+  select(c("selfemp", "insurance")) %>% 
+  table %>% 
+  as.data.frame.matrix -> selfemp_table
+
+selfemp_table <- cbind("Самозанятость" = rownames(selfemp_table), selfemp_table)
+rownames(selfemp_table) <- NULL
+
+
+ft_selfemp <- flextable(selfemp_table)
+ft_selfemp <- autofit(ft_selfemp)
+ft_selfemp <- theme_vanilla(ft_selfemp)
+ft_selfemp <- add_header_lines(ft_selfemp, values = "Самозанятость и наличие страховки")
+ft_selfemp <- align(ft_selfemp, i = 1, part = "header", align = "center")
+ft_selfemp
+```
+
+```{r}
+insurance_data %>% 
+  select(c("selfemp", "insurance")) %>% 
+  table %>% 
+  chisq.test() -> selfemp
+
+cat("Проверка гипотезы о независимости статуса самозанятого и наличия страховки\n")
+selfemp$method
+cat("P-value:")
+selfemp$p.value
+cat("Отклоняем нулевую гипотезу о независимости статуса самозанятого и наличия страховки")
+
+```
+Сила ассоциации
+```{r}
+insurance_data %>% 
+  select(c("selfemp", "insurance")) %>% 
+  table %>% 
+  riskratio(., rev = "columns") -> rr_selfemp
+
+rr_selfemp$measure
+cat("RR показывает, что у самозанятых есть страховка в 0.84 раз реже, CI(0.809 - 0.879)\n")
+
+
+insurance_data %>% 
+  select(c("selfemp", "insurance")) %>% 
+  table %>% 
+  riskratio(., rev = "both") -> rr_selfemp1
+
+rr_selfemp1$measure
+cat("RR показывает, что у не самозанятых есть страховка в 1.19 раз чаще, CI(1.137 - 1.236)")
+```
 
 
 
