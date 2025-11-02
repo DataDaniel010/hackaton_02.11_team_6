@@ -15,6 +15,7 @@ library(gridExtra)
 library(patchwork)
 library(ggrepel)
 library(ggthemes)
+library(ggmosaic)
 
 library(flextable)
 library(epitools)
@@ -188,7 +189,7 @@ plot_numeric<- function(df) {
     sd_val <- sd(df[[var]], na.rm = TRUE)
     
     p <- ggplot(df, aes(x = .data[[var]])) +
-      geom_histogram(aes(y = ..density..),
+      geom_histogram(aes(y = after_stat(density)),
                      bins = 25,
                      fill = "lightblue",
                      alpha = 0.7,
@@ -248,6 +249,47 @@ plot_numeric(numeric_columns)
 ```{r fig.width=12, fig.height=10}
 plot_categorical(insurance_data)
 ```
+
+Поищем взаимосвязи с МС.
+
+```{r fig.width=10, fig.height=8}
+p1<- ggplot(insurance_data, aes(x = insurance, y = age, fill = insurance)) +
+  geom_boxplot() +
+  labs(title = "Возраст и наличие страховки") +
+  theme(legend.position = "none")
+
+p2<- ggplot(insurance_data, aes(x = insurance, y = family, fill = insurance)) +
+  geom_boxplot() +
+  labs(title = "Количество членов семьи и наличие страховки") +
+  theme(legend.position = "none")
+p1+p2
+```
+```{r fig.width=14, fig.height=12}
+
+categorical_vars <- names(insurance_data)[sapply(insurance_data, function(x) is.factor(x) | is.character(x))]
+categorical_vars <- categorical_vars[categorical_vars != "insurance"]
+plot_list <- list()
+
+for (col_name in categorical_vars) {
+  temp_data <- data.frame(
+    default = insurance_data$insurance,
+    x = insurance_data[[col_name]]
+  )
+  p <- ggplot(data = temp_data) +
+    geom_mosaic(aes(x = product(default, x), fill = default)) +
+    ggtitle(paste("Связь наличия МС и", col_name)) +
+    coord_flip() +
+    theme(legend.position = "none")
+  plot_list[[col_name]] <- p
+
+  
+}
+
+(plot_list[[1]] | plot_list[[2]] | plot_list[[3]]) /
+(plot_list[[4]] | plot_list[[5]] | plot_list[[6]]) /
+(plot_list[[7]] | plot_list[[8]] | plot_spacer())
+```
+
 
 #Анализ данных
 Выбрать и реализовать методы однофакторного анализа для количественной оценки взаимосвязи между наличием МС и собранными признаками пациентов (помните, что взаимосвязь - это не только p-значения, но и доверительные интервалы!).
