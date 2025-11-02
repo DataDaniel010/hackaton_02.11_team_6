@@ -769,13 +769,72 @@ cat("RR показывает, что у людей старше 40 лет в 1.1
 ```
 
 ##Число членов семьи и страховка
+Предлагаю тоже поделить на категории, если в семье 1 человек, то он одиночка, если 2, то значит есть партнер, если больше, значит есть еще и дети. 
 
 ```{r}
 insurance_data %>% 
-  
+  mutate(family_cat = ifelse(family == 1, "Один", ifelse(family == 2, "Есть партнер", "Есть дети"))) -> insurance_family
+
+```
+
+```{r}
+insurance_family %>% 
+  select(c("family_cat", "insurance")) %>% 
+  table %>% 
+  as.data.frame.matrix -> family_table
+
+family_table <- cbind("Возраст" = rownames(family_table), family_table)
+rownames(family_table) <- NULL
+
+
+ft_family <- flextable(family_table)
+ft_family <- autofit(ft_family)
+ft_family <- theme_vanilla(ft_family)
+ft_family <- add_header_lines(ft_family, values = "Семья и наличие страховки")
+ft_family <- align(ft_family, i = 1, part = "header", align = "center")
+ft_family
+
 
 
 ```
+
+
+```{r}
+insurance_family %>% 
+  select(c("family_cat", "insurance")) %>% 
+  table %>% 
+  chisq.test() -> family
+
+cat("Проверка гипотезы о независимости семьи и наличия страховки\n")
+family$method
+cat("P-value:")
+family$p.value
+cat("Отклоняем нулевую гипотезу о независимости семьи и наличия страховки")
+```
+
+```{r}
+insurance_family %>% 
+  select(c("family_cat", "insurance")) %>% 
+  table -> family_3x2
+
+riskratio(family_3x2[c("Есть дети", "Есть партнер"), ], rev = "columns") -> rr_k_p
+rr_k_p$measure
+cat("RR показывает, что у тех у кого есть партнер в 1.06 раза чаще имеют страховку, чем те, у кого есть дети CI(1.03, 1.08)")
+```
+
+```{r}
+riskratio(family_3x2[c("Есть дети", "Один"), ], rev = "columns") -> rr_k_a
+rr_k_a$measure
+cat("RR показывает, что те, кто один в 0.97 раза реже имеют страховку, чем те, у кого есть дети CI(0.938788 1.002996)
+    CI накрывает 1!!!")
+```
+
+```{r}
+riskratio(family_3x2[c("Есть партнер", "Один"), ], rev = "columns") -> rr_p_a
+rr_p_a$measure
+cat("RR показывает, что те, кто один в 0.91 раза реже имеют страховку, чем те, у кого есть партнер CI(0.8869362 0.9510029)")
+```
+
 
 
 # Визуализация результатов
