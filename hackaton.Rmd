@@ -126,11 +126,122 @@ table_1
 
 ```{r}
 
+plot_categorical <- function(df) {
+  categorical_vars <- names(df)[sapply(df, function(x) is.factor(x) | is.character(x))]
+  
+  plots <- list()
+  for(var in categorical_vars) {
+    freq_data <- as.data.frame(table(df[[var]]))
+    names(freq_data) <- c("Category", "Count")
+    freq_data$Percentage <- round(freq_data$Count / sum(freq_data$Count) * 100, 1)
+    freq_data$Label <- paste0(freq_data$Count, "\n", freq_data$Percentage, "%")
+    
+    freq_data <- freq_data[order(-freq_data$Count), ]
+    freq_data$Category <- factor(freq_data$Category, levels = freq_data$Category)
+    
+    p <- ggplot(freq_data, aes(x = Category, y = Count, fill = Category)) +
+      geom_bar(stat = "identity", alpha = 0.8) +
+      
+      geom_text_repel(
+        aes(label = Label),
+        color = "black",
+        size = 3.5,
+        fontface = "bold",
+        direction = "y",
+        nudge_y = max(freq_data$Count) * 0.05, 
+        segment.color = "gray50",
+        segment.size = 0.3,
+        min.segment.length = 0.1,
+        box.padding = 0.2,
+        point.padding = 0.2,
+        lineheight = 0.8
+      )  +
+      
+      scale_fill_brewer(palette = "Set2") +
+      labs(title = paste("Переменная:", var),
+           subtitle = paste("Категорий:", nrow(freq_data)),
+           x = "", y = "Количество") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "none",
+            plot.title = element_text(face = "bold", size = 14)) +
+      scale_y_continuous(expand = expansion(mult = c(0, 0.15))) 
+    
+    plots[[var]] <- p
+  }
+  
+  grid.arrange(grobs = plots, ncol = 3)
+}
+
+plot_numeric<- function(df) {
+  numeric_vars <- names(df)
+  
+  plots <- list()
+  for(var in numeric_vars) {
+    mean_val <- mean(df[[var]], na.rm = TRUE)
+    median_val <- median(df[[var]], na.rm = TRUE)
+    sd_val <- sd(df[[var]], na.rm = TRUE)
+    
+    p <- ggplot(df, aes(x = .data[[var]])) +
+      geom_histogram(aes(y = ..density..),
+                     bins = 25,
+                     fill = "lightblue",
+                     alpha = 0.7,
+                     color = "white",
+                     linewidth = 0.3) +
+
+      geom_density(color = "darkgreen",
+                   linewidth = 1.2,
+                   alpha = 0.8) +
+      geom_vline(xintercept = median_val,
+                 color = "red",
+                 linewidth = 1.2,
+                 linetype = "dashed") +
+      
+      annotate("label",
+               x = Inf, y = Inf,
+               label = paste0("Среднее: ", round(mean_val, 2), "\n",
+                             "Медиана: ", round(median_val, 2), "\n", 
+                             "SD: ", round(sd_val, 2)),
+               hjust = 1.1, vjust = 1.5,
+               size = 3.5,
+               color = "black",
+               fontface = "bold") +
+      labs(title = paste("Распределение:", var),
+           x = var,
+           y = "Плотность") +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+        plot.background = element_rect(fill = "white", color = NA)
+      )
+    
+    plots[[var]] <- p
+  }
+  
+  wrap_plots(plots, ncol = 2) +
+    plot_annotation(
+      title = "Распределение числовых переменных",
+      theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5))
+    )
+}
+
+
+insurance_data[sapply(insurance_data, is.numeric)] %>% 
+  select(-rownames) -> numeric_columns
+
+
 ```
 
 
-```{r}
+```{r fig.width=8, fig.height=8}
+plot_numeric(numeric_columns)
+```
 
+```{r fig.width=12, fig.height=10}
+plot_categorical(insurance_data)
 ```
 
 #Анализ данных
