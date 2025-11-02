@@ -451,11 +451,108 @@ cat("RR показывает, что у здоровых есть страхов
 ```
 ##Регион и страховка
 
+```{r}
+insurance_data %>% 
+  select(c("region", "insurance")) %>% 
+  table %>% 
+  as.data.frame.matrix -> region_table
+
+region_table <- cbind("Регион проживания" = rownames(region_table), region_table)
+rownames(region_table) <- NULL
 
 
+ft_region <- flextable(region_table)
+ft_region <- autofit(ft_region)
+ft_region <- theme_vanilla(ft_region)
+ft_region <- add_header_lines(ft_region, values = "Регион проживания и наличие страховки")
+ft_region <- align(ft_region, i = 1, part = "header", align = "center")
+ft_region
 
 
+```
 
+
+```{r}
+insurance_data %>% 
+  select(c("region", "insurance")) %>% 
+  table %>% 
+  chisq.test() -> region
+
+cat("Проверка гипотезы о независимости региона проживания и наличия страховки\n")
+region$method
+cat("P-value:")
+region$p.value
+cat("Отклоняем нулевую гипотезу о независимости региона проживания и наличия страховки")
+
+```
+Сила ассоциации
+
+```{r}
+insurance_data %>% 
+  select(c("region", "insurance")) %>% 
+  table -> region_4x2
+
+riskratio(region_4x2[c("midwest", "northeast"), ], rev = "columns") -> rr_mw_ne
+rr_mw_ne$measure
+cat("RR показывает, что у проживающих на северовостоке есть страховка в 0.974  раза реже, чем у тех, кто проживает на midwest CI(0.947 - 1.002) 
+    CI накрывает 1!!!")
+```
+
+
+```{r}
+riskratio(region_4x2[c("south", "west"), ], rev = "columns") -> rr_s_w
+rr_s_w$measure
+cat("RR показывает, что у проживающих на западе есть страховка в 0.964 раза реже, чем у тех, кто проживает на юге CI(0.935 - 0.995)")
+```
+
+```{r}
+riskratio(region_4x2[c("midwest", "south"), ], rev = "columns") -> rr_mw_s
+rr_mw_s$measure
+cat("RR показывает, что у проживающих на юге есть страховка в 0.915 раза реже, чем у тех, кто проживает на midwest CI(0.892 - 0.939)")
+```
+```{r}
+riskratio(region_4x2[c("midwest", "west"), ], rev = "columns") -> rr_mw_w
+rr_mw_w$measure
+cat("RR показывает, что у проживающих на западе есть страховка в 0.883 раза реже, чем у тех, кто проживает на midwest CI(0.856 - 0.910)")
+```
+
+```{r}
+riskratio(region_4x2[c("northeast", "south"), ], rev = "columns") -> rr_ne_s
+rr_ne_s$measure
+cat("RR показывает, что у проживающих на юге есть страховка в 0.939 раза реже, чем у тех, кто проживает на северовостоке CI(0.913 - 0.966)")
+
+```
+```{r}
+riskratio(region_4x2[c("northeast", "west"), ], rev = "columns") -> rr_ne_w
+rr_ne_w$measure
+cat("RR показывает, что у проживающих на западе есть страховка в 0.906 раза реже, чем у тех, кто проживает на северовостоке CI(0.877 - 0.936)")
+```
+
+##Образование и страховка
+Образование можно представить как категориальную порядковую переменную, ведь PhD явно лучше bachelor. Можно попробовать применить тест Манна-Уитни
+Нулевая гипотеза: распределение уровней образования одинаково для обеих групп (со страховкой и без)
+Альтернативная гипотеза: 
+```{r}
+insurance_data %>% 
+ # mutate(education_binary = ifelse(education == c("bachelor", "highschool", "ged", "phd" )))
+  mutate(education = factor(education, levels = c("other", "none", "ged", "highschool", "bachelor", "master", "phd"), labels = c(0, 1, 2, 2, 3, 4, 5))) %>% 
+  mutate(education = as.numeric(education)) -> insurance_data_mw
+
+insurance_data_mw %>% 
+  mutate(insurance = factor(insurance)) -> insurance_data_mw
+
+mw <- wilcox.test(education ~ insurance, data = insurance_data_mw)
+
+
+mw$p.value
+cat("")
+
+```
+
+
+```{r}
+insurance_data %>% count(education)
+```
 
 
 
