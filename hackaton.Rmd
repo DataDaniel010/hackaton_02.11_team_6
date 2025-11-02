@@ -252,7 +252,7 @@ plot_categorical(insurance_data)
 #Анализ данных
 Выбрать и реализовать методы однофакторного анализа для количественной оценки взаимосвязи между наличием МС и собранными признаками пациентов (помните, что взаимосвязь - это не только p-значения, но и доверительные интервалы!).
 
-Исследование кросс-секционное. Для оценки независимости групп будет использован тест хи-квадрат, для оценки силы ассоциации среди категориальных переменных будет использован RR.
+Исследование кросс-секционное. Для оценки независимости групп с категориальными признаками будет использован тест хи-квадрат, для оценки силы ассоциации среди категориальных переменных будет использован RR.
 
 ```{r}
 insurance_data %>% 
@@ -404,6 +404,55 @@ insurance_data %>%
 rr_selfemp1$measure
 cat("RR показывает, что у не самозанятых есть страховка в 1.19 раз чаще, CI(1.137 - 1.236)")
 ```
+##Здоровье и страховка
+
+```{r}
+insurance_data %>% 
+  mutate(health = ifelse(health == "no", "Болен", "Здоров")) %>% 
+  select(c("health", "insurance")) %>% 
+  table %>% 
+  as.data.frame.matrix -> health_table
+
+health_table <- cbind("Состояние здоровья" = rownames(health_table), health_table)
+rownames(health_table) <- NULL
+
+
+ft_health <- flextable(health_table)
+ft_health <- autofit(ft_health)
+ft_health <- theme_vanilla(ft_health)
+ft_health <- add_header_lines(ft_health, values = "Состояние здоровья и наличие страховки")
+ft_health <- align(ft_health, i = 1, part = "header", align = "center")
+ft_health
+
+```
+
+```{r}
+insurance_data %>% 
+  select(c("health", "insurance")) %>% 
+  table %>% 
+  chisq.test() -> health
+
+cat("Проверка гипотезы о независимости состояния здоровья и наличия страховки\n")
+health$method
+cat("P-value:")
+health$p.value
+cat("Отклоняем нулевую гипотезу о независимости состояния здоровья и наличия страховки")
+
+```
+Сила ассоциации
+```{r}
+insurance_data %>% 
+  select(c("health", "insurance")) %>% 
+  table %>% 
+  riskratio(., rev = "columns") -> rr_health
+
+rr_selfemp$measure
+cat("RR показывает, что у здоровых есть страховка в 1.11 раза чаще, CI(1.055 - 1.164)")
+```
+##Регион и страховка
+
+
+
 
 
 
