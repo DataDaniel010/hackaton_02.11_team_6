@@ -344,7 +344,7 @@ cat("Отклоняем нулевую гипотезу о независимо�
 insurance_data %>% 
   select(c("gender", "insurance")) %>% 
   table %>% 
-  riskratio(., rev = "both") -> rr_gender
+  riskratio(., rev = "rows") -> rr_gender
 
 rr_gender$measure
 cat("RR показывает, что у женщин есть страховка в 1.067 раз чаще CI (1.045 - 1.089)")
