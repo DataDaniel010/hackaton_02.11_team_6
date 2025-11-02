@@ -16,6 +16,7 @@ library(patchwork)
 library(ggrepel)
 library(ggthemes)
 library(ggmosaic)
+library(forestplot)
 
 library(flextable)
 library(epitools)
@@ -718,7 +719,7 @@ cat("RR показывает, что у европеоидных людей в 1
 
 
 # Визуализация результатов
-```{r fig.width=14, fig.height=12}
+```{r fig.width=14, fig.height=12, include = FALSE}
 calculate_rr_universal <- function(data, exposure_var, outcome_var = "insurance") {
 
   tab <- data %>% 
@@ -798,5 +799,74 @@ ggplot(rr_clean, aes(x = rr, y = reorder(comparison, rr))) +
   theme(axis.text.y = element_text(size = 12))
 
 ```
+
+```{r fig.width=14, fig.height=12}
+
+mean <- rr_clean$rr
+lower <- rr_clean$rr_lower
+upper <- rr_clean$rr_upper
+
+table_text <- cbind(
+  c("Переменная", rr_clean$variable),
+  c("Сравнение", rr_clean$comparison),
+  c("RR", sprintf("%.3f", rr_clean$rr)),
+  c("95% ДИ", sprintf("(%.3f-%.3f)", rr_clean$rr_lower, rr_clean$rr_upper))
+)
+
+forestplot(
+  labeltext = table_text,
+
+  lower = c(NA, lower),
+  upper = c(NA, upper),
+  mean = c(NA, mean),
+  is.summary = c(TRUE, rep(FALSE, nrow(rr_clean))),
+  xlog = FALSE,
+  title = "Факторы, ассоциированные с наличием медицинской страховки",
+  xtitle = "Отношение рисков (RR)",
+  boxsize = 0.3,
+  col = fpColors(box = "steelblue", lines = "darkblue"),
+  txt_gp = fpTxtGp(cex = 0.9),
+  graphwidth = unit(8, "cm"),
+  zero = 1
+)
+```
+```{r}
+library(ggplot2)
+
+forest_data <- data.frame(
+  variable = c("Мужской vs\n Женский пол", "Европеоидные vs\nАфроамериканцы", "Юг vs\nСредний Запад", "Запад vs\nСредний Запад", 
+               "Наличие брака", "Здоровый статус", "Аттестат (GED) vs\nОтсутствие образования",
+               "Средняя школа vs\nОтсутствие образования", "Бакалавр vs\nОтсутствие образования", "Магистр vs\nОтсутствие образования", 
+               "Доктор наук (PhD) vs\nОтсутствие образования", "Другое образование vs\nОтсутствие образования", "Самозанятость"),
+  rr = c(0.937, 1.064, 0.915, 0.883, 1.207, 1.108, 
+         1.319, 1.514, 1.661, 1.745, 1.752, 1.619, 0.844),
+  ci_lower = c(0.918, 1.027, 0.892, 0.856, 1.179, 1.055,
+               1.212, 1.431, 1.569, 1.645, 1.635, 1.522, 0.809),
+  ci_upper = c(0.957, 1.102, 0.939, 0.910, 1.237, 1.164,
+               1.436, 1.602, 1.759, 1.850, 1.877, 1.722, 0.880)
+)
+
+
+forest_plot_colored <- ggplot(forest_data, 
+                             aes(x = rr, y = reorder(variable, rr),
+                                 color = rr < 1)) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(xmin = ci_lower, xmax = ci_upper), 
+                 width = 0.2, linewidth = 0.7, orientation='y') +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red", alpha = 0.7) +
+  scale_x_continuous(breaks = seq(0.7, 1.8, 0.1), 
+                     limits = c(0.7, 2.0)) +
+  scale_color_manual(values = c("TRUE" = "#E74C3C", "FALSE" = "#2E86C1"),
+                     guide = "none") +
+  labs(
+    title = "Факторы, ассоциированные\nс наличием медицинской страховки",
+    x = "Отношение рисков (RR)",
+    y = ""
+  ) +
+  theme_minimal()
+
+print(forest_plot_colored)
+```
+
 
 
