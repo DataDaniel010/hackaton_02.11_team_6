@@ -708,13 +708,74 @@ cat("RR показывает, что у европеоидных людей в 1
 ```
 
 ```{r}
-riskratio(ethnicity_3x2[c("afam", "cauc"), ], rev = "columns") -> rr_af_c
-rr_af_c$measure
-cat("RR показывает, что у европеоидных людей в 1.06 раза чаще встречается страховка, чем у афроамериканцев CI(1.03, 1.10)")
+riskratio(ethnicity_3x2[c("afam", "other"), ], rev = "columns") -> rr_af_o
+rr_af_o$measure
+cat("RR показывает, что у прочих людей в 0.99 раза реже встречается страховка, чем у афроамериканцев CI(0.926, 1.05)
+    CI наркывает 1!!!")
+```
+```{r}
+riskratio(ethnicity_3x2[c("cauc", "other"), ], rev = "columns") -> rr_c_o
+rr_c_o$measure
+cat("RR показывает, что у прочих людей в 0.93 раза реже встречается страховка, чем у европеоидных CI(0.877, 0.988)")
+```
+## Возраст и страховка
+Возраст - количественная переменная. Для удобства можно разбить ее на 2 категории - до 40 лет и после. 
+```{r}
+insurance_data %>% 
+  mutate(age_binary = ifelse(age <= 40, "Младше 40", "Старше 40")) -> insurance_data_age
 ```
 
+```{r}
+insurance_data_age %>% 
+  select(c("age_binary", "insurance")) %>% 
+  table %>% 
+  as.data.frame.matrix -> age_table
+
+age_table <- cbind("Возраст" = rownames(age_table), age_table)
+rownames(age_table) <- NULL
 
 
+ft_age <- flextable(age_table)
+ft_age <- autofit(ft_age)
+ft_age <- theme_vanilla(ft_age)
+ft_age <- add_header_lines(ft_age, values = "Возраст и наличие страховки")
+ft_age <- align(ft_age, i = 1, part = "header", align = "center")
+ft_age
+
+```
+
+```{r}
+insurance_data_age %>% 
+  select(c("age_binary", "insurance")) %>% 
+  table %>% 
+  chisq.test() -> age
+
+cat("Проверка гипотезы о независимости возраста и наличия страховки\n")
+age$method
+cat("P-value:")
+age$p.value
+cat("Отклоняем нулевую гипотезу о независимости возраста и наличия страховки")
+
+```
+
+```{r}
+insurance_data_age %>% 
+  select(c("age_binary", "insurance")) %>% 
+  table %>% 
+  riskratio(., rev = "columns") -> rr_age
+
+rr_age$measure
+cat("RR показывает, что у людей старше 40 лет в 1.12 раз чаще встречается страховка CI(1.106324 - 1.152467)")
+```
+
+##Число членов семьи и страховка
+
+```{r}
+insurance_data %>% 
+  
+
+
+```
 
 
 # Визуализация результатов
