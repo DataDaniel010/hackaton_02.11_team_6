@@ -339,7 +339,7 @@ for (col_name in categorical_vars) {
   )
   p <- ggplot(data = temp_data) +
     geom_mosaic(aes(x = product(insurance, x), fill = insurance)) +
-    ggtitle(paste("Связь наличия МС и", col_name)) +
+    ggtitle(paste("наличие МС и", col_name)) +
     coord_flip() +
     theme(legend.position = "none")
   plot_list[[col_name]] <- p
