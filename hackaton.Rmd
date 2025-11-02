@@ -316,7 +316,7 @@ insurance_data %>%
   as.data.frame.matrix -> married_table
 
 married_table <- cbind("Семейное положение" = rownames(married_table), married_table)
-rownames(gend_table) <- NULL
+rownames(married_table) <- NULL
 
 
 ft_married <- flextable(married_table)
@@ -327,6 +327,31 @@ ft_married <- align(ft_married, i = 1, part = "header", align = "center")
 ft_married
 
 ```
+
+```{r}
+insurance_data %>% 
+  select(c("married", "insurance")) %>% 
+  table %>% 
+  chisq.test() -> married
+
+cat("Проверка гипотезы о независимости семейного положения и наличия страховки\n")
+married$method
+cat("P-value:")
+married$p.value
+cat("Отклоняем нулевую гипотезу о независимости семейного положения и наличия страховки")
+```
+Сила ассоциации
+```{r}
+insurance_data %>% 
+  select(c("married", "insurance")) %>% 
+  table %>% 
+  riskratio(., rev = "columns") -> rr_married
+
+rr_married$measure
+cat("RR показывает, что у людей в браке есть страховка в 1.2 раза чаще")
+
+```
+
 
 
 
